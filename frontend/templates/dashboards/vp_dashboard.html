@@ -1,0 +1,407 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}VP Dashboard{% endblock %}
+{% block page_title %}Vice Principal Dashboard{% endblock %}
+{% block page_subtitle %}Academic control — subjects, teachers, timetable{% endblock %}
+{% block role_icon %}📋{% endblock %}
+
+{% block nav_items %}
+<span class="nav-section-title">Overview</span>
+<a class="nav-item active" id="nav-overview" onclick="showSection('sec-overview'); setActiveNav('nav-overview'); loadStats()">
+  <span class="nav-item-icon">📊</span> Dashboard
+</a>
+<span class="nav-section-title">Academics</span>
+<a class="nav-item" id="nav-semesters" onclick="showSection('sec-semesters'); setActiveNav('nav-semesters'); loadSemesters()">
+  <span class="nav-item-icon">🗓️</span> Semester Control
+</a>
+<a class="nav-item" id="nav-subjects" onclick="showSection('sec-subjects'); setActiveNav('nav-subjects'); loadSubjects()">
+  <span class="nav-item-icon">📚</span> Subjects
+</a>
+<a class="nav-item" id="nav-assign" onclick="showSection('sec-assign'); setActiveNav('nav-assign'); loadAssignments()">
+  <span class="nav-item-icon">👩‍🏫</span> Teacher Assignments
+</a>
+<a class="nav-item" id="nav-timetable" onclick="showSection('sec-timetable'); setActiveNav('nav-timetable'); loadTimetable()">
+  <span class="nav-item-icon">🗒️</span> Timetable
+</a>
+<span class="nav-section-title">Data</span>
+<a class="nav-item" id="nav-view-teachers" onclick="showSection('sec-view-teachers'); setActiveNav('nav-view-teachers'); loadTeachers()">
+  <span class="nav-item-icon">👁️</span> View Teachers
+</a>
+<a class="nav-item" id="nav-view-students" onclick="showSection('sec-view-students'); setActiveNav('nav-view-students'); loadStudents()">
+  <span class="nav-item-icon">👩‍🎓</span> View Students
+</a>
+<a class="nav-item" id="nav-resets" onclick="showSection('sec-resets'); setActiveNav('nav-resets'); loadResets()">
+  <span class="nav-item-icon">🔑</span> Password Resets
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- OVERVIEW -->
+<div id="sec-overview" class="dashboard-section">
+  <div class="stats-grid">
+    <div class="stat-card blue"><div class="stat-icon blue">📅</div><div class="stat-content"><div class="stat-value" id="s-sem">—</div><div class="stat-label">Current Semester</div></div></div>
+    <div class="stat-card purple"><div class="stat-icon purple">📚</div><div class="stat-content"><div class="stat-value" id="s-subj">—</div><div class="stat-label">Active Subjects</div></div></div>
+    <div class="stat-card cyan"><div class="stat-icon cyan">👩‍🏫</div><div class="stat-content"><div class="stat-value" id="s-teach">—</div><div class="stat-label">Teachers</div></div></div>
+    <div class="stat-card green"><div class="stat-icon green">👩‍🎓</div><div class="stat-content"><div class="stat-value" id="s-stu">—</div><div class="stat-label">Students</div></div></div>
+  </div>
+  <div class="section-card">
+    <div class="section-header"><h3>📋 VP Responsibilities</h3></div>
+    <div class="section-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;">
+        <div style="padding:1rem;background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.2);border-radius:12px;"><div style="font-size:1.2rem;margin-bottom:0.4rem;">📚</div><strong style="font-size:0.85rem;">Subject Management</strong><p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">Create subjects, assign to semesters</p></div>
+        <div style="padding:1rem;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:12px;"><div style="font-size:1.2rem;margin-bottom:0.4rem;">👩‍🏫</div><strong style="font-size:0.85rem;">Teacher Assignment</strong><p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">One teacher → one subject per semester</p></div>
+        <div style="padding:1rem;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:12px;"><div style="font-size:1.2rem;margin-bottom:0.4rem;">🗒️</div><strong style="font-size:0.85rem;">Timetable</strong><p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">Create clash-free class schedules manually</p></div>
+        <div style="padding:1rem;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;"><div style="font-size:1.2rem;margin-bottom:0.4rem;">🗓️</div><strong style="font-size:0.85rem;">Semester Control</strong><p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">Toggle active semesters (Odd: 1,3,5 / Even: 2,4,6)</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SEMESTERS -->
+<div id="sec-semesters" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header">
+      <h3>🗓️ Semester Control</h3>
+      <button class="btn-primary btn-sm" onclick="openModal('addSemModal')">➕ Add Semester</button>
+    </div>
+    <div class="section-body">
+      <div class="alert alert-info" style="margin-bottom:1rem;">ℹ️ Only active semesters are visible system-wide. Toggle using the button. Odd semesters: 1,3,5 · Even: 2,4,6.</div>
+      <div id="semList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SUBJECTS -->
+<div id="sec-subjects" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header">
+      <h3>📚 Subjects</h3>
+      <button class="btn-primary btn-sm" onclick="openModal('addSubjModal')">➕ Add Subject</button>
+    </div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table><thead><tr><th>Code</th><th>Name</th><th>Semester</th><th>Credits</th><th>Status</th></tr></thead>
+        <tbody id="subjBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TEACHER ASSIGNMENTS -->
+<div id="sec-assign" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header">
+      <h3>👩‍🏫 Teacher Assignments</h3>
+      <button class="btn-primary btn-sm" onclick="openModal('addAssignModal')">➕ Assign Teacher</button>
+    </div>
+    <div class="section-body">
+      <div class="alert alert-warning" style="margin-bottom:1rem;">⚠️ Rule: One teacher can handle multiple semesters, but only one subject per semester.</div>
+      <div class="table-wrapper">
+        <table><thead><tr><th>Teacher</th><th>Subject</th><th>Code</th><th>Semester</th></tr></thead>
+        <tbody id="assignBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TIMETABLE -->
+<div id="sec-timetable" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header">
+      <h3>🗒️ Timetable</h3>
+      <div style="display:flex;gap:0.5rem;">
+        <select id="ttSemFilter" onchange="loadTimetable()" style="width:auto;padding:0.4rem 0.75rem;font-size:0.82rem;"><option value="">All Semesters</option></select>
+        <button class="btn-primary btn-sm" onclick="openModal('addTTModal')">➕ Add Slot</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table><thead><tr><th>Day</th><th>Start</th><th>End</th><th>Subject</th><th>Teacher</th><th>Semester</th><th>Action</th></tr></thead>
+        <tbody id="ttBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW TEACHERS -->
+<div id="sec-view-teachers" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header"><h3>👩‍🏫 All Teachers</h3></div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table><thead><tr><th>Name</th><th>Login ID</th><th>Status</th></tr></thead>
+        <tbody id="teacherBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW STUDENTS -->
+<div id="sec-view-students" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header"><h3>👩‍🎓 All Students</h3></div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table><thead><tr><th>Name</th><th>Login ID</th><th>Status</th></tr></thead>
+        <tbody id="studentBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESETS -->
+<div id="sec-resets" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header"><h3>🔑 Teacher Password Resets</h3></div>
+    <div class="section-body"><div id="vpResetList"></div></div>
+  </div>
+</div>
+
+<!-- ── MODALS ── -->
+<div class="modal-overlay hidden" id="addSemModal">
+  <div class="modal">
+    <div class="modal-header"><h3>➕ Add Semester</h3><button class="modal-close" onclick="closeModal('addSemModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Semester Number (1-6)</label><div class="input-wrapper"><span class="input-icon">#</span><input type="number" id="sem-num" min="1" max="6" placeholder="e.g. 1"></div></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Start Date</label><input type="date" id="sem-start" style="width:100%;padding:0.875rem 1rem;background:var(--bg-card);border:1px solid var(--border-light);border-radius:12px;color:var(--text-primary);font-family:inherit;outline:none;"></div>
+        <div class="form-group"><label>End Date</label><input type="date" id="sem-end" style="width:100%;padding:0.875rem 1rem;background:var(--bg-card);border:1px solid var(--border-light);border-radius:12px;color:var(--text-primary);font-family:inherit;outline:none;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('addSemModal')">Cancel</button>
+      <button class="btn-primary" onclick="addSemester()">✅ Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="addSubjModal">
+  <div class="modal">
+    <div class="modal-header"><h3>📚 Add Subject</h3><button class="modal-close" onclick="closeModal('addSubjModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Subject Code</label><div class="input-wrapper"><span class="input-icon">🔖</span><input type="text" id="subj-code" placeholder="e.g. BCA301"></div></div>
+        <div class="form-group"><label>Subject Name</label><div class="input-wrapper"><span class="input-icon">📘</span><input type="text" id="subj-name" placeholder="e.g. Data Structures"></div></div>
+        <div class="form-group"><label>Semester</label><select id="subj-sem"></select></div>
+        <div class="form-group"><label>Credits</label><div class="input-wrapper"><span class="input-icon">⭐</span><input type="number" id="subj-credits" value="3" min="1" max="6"></div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('addSubjModal')">Cancel</button>
+      <button class="btn-primary" onclick="addSubject()">✅ Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="addAssignModal">
+  <div class="modal">
+    <div class="modal-header"><h3>👩‍🏫 Assign Teacher</h3><button class="modal-close" onclick="closeModal('addAssignModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Teacher</label><select id="assign-teacher"></select></div>
+        <div class="form-group"><label>Semester</label><select id="assign-sem" onchange="loadSubjectsForSem()"></select></div>
+        <div class="form-group" style="grid-column:1/-1;"><label>Subject</label><select id="assign-subj"></select></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('addAssignModal')">Cancel</button>
+      <button class="btn-primary" onclick="assignTeacher()">✅ Assign</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="addTTModal">
+  <div class="modal">
+    <div class="modal-header"><h3>🗒️ Add Timetable Slot</h3><button class="modal-close" onclick="closeModal('addTTModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Semester</label><select id="tt-sem" onchange="loadTTSubjects()"></select></div>
+        <div class="form-group"><label>Day</label>
+          <select id="tt-day">
+            <option value="monday">Monday</option><option value="tuesday">Tuesday</option>
+            <option value="wednesday">Wednesday</option><option value="thursday">Thursday</option>
+            <option value="friday">Friday</option><option value="saturday">Saturday</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Start Time</label><input type="time" id="tt-start" style="width:100%;padding:0.875rem 1rem;background:var(--bg-card);border:1px solid var(--border-light);border-radius:12px;color:var(--text-primary);font-family:inherit;outline:none;"></div>
+        <div class="form-group"><label>End Time</label><input type="time" id="tt-end" style="width:100%;padding:0.875rem 1rem;background:var(--bg-card);border:1px solid var(--border-light);border-radius:12px;color:var(--text-primary);font-family:inherit;outline:none;"></div>
+        <div class="form-group" style="grid-column:1/-1;"><label>Subject</label><select id="tt-subj"></select></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('addTTModal')">Cancel</button>
+      <button class="btn-primary" onclick="addTimetableSlot()">✅ Add Slot</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allSemesters = [], allTeachers = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadStats();
+  fetchSemestersForDropdowns();
+  fetchTeachersForDropdowns();
+});
+
+async function loadStats() {
+  const d = await apiGet('/api/dashboard/stats/');
+  document.getElementById('s-sem').textContent = d.current_semester ? `Sem ${d.current_semester}` : 'None';
+  document.getElementById('s-subj').textContent = d.total_subjects ?? '—';
+  document.getElementById('s-teach').textContent = d.total_teachers ?? '—';
+  document.getElementById('s-stu').textContent = d.total_students ?? '—';
+}
+
+async function fetchSemestersForDropdowns() {
+  const d = await apiGet('/api/semesters/');
+  allSemesters = d.semesters || [];
+  const selects = ['subj-sem','assign-sem','tt-sem','ttSemFilter'];
+  selects.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const hasAll = id === 'ttSemFilter';
+    el.innerHTML = (hasAll ? '<option value="">All Semesters</option>' : '') +
+      allSemesters.map(s => `<option value="${s.id}">Semester ${s.number} ${s.is_current ? '✅' : ''}</option>`).join('');
+  });
+}
+
+async function fetchTeachersForDropdowns() {
+  const d = await apiGet('/api/users/?role=teacher');
+  allTeachers = d.users || [];
+  const el = document.getElementById('assign-teacher');
+  if (el) el.innerHTML = allTeachers.map(t => `<option value="${t.id}">${t.full_name}</option>`).join('');
+}
+
+async function loadSemesters() {
+  const d = await apiGet('/api/semesters/');
+  const list = document.getElementById('semList');
+  list.innerHTML = (d.semesters || []).map(s => `
+    <div style="padding:1.25rem;background:${s.is_current ? 'rgba(34,197,94,0.08)' : 'var(--bg-surface)'};border:1px solid ${s.is_current ? 'rgba(34,197,94,0.3)' : 'var(--border)'};border-radius:12px;">
+      <div style="font-size:1.5rem;font-weight:700;margin-bottom:0.25rem;">Semester ${s.number}</div>
+      <span class="pill ${s.is_current ? 'pill-green' : 'pill-red'}">${s.is_current ? '● Active' : '● Inactive'}</span>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">${s.start_date || 'No dates set'}</div>
+      <button class="btn-sm ${s.is_current ? 'btn-danger' : 'btn-success'}" style="margin-top:0.75rem;width:100%;" onclick="toggleSem(${s.id})">
+        ${s.is_current ? '🔕 Deactivate' : '✅ Activate'}
+      </button>
+    </div>
+  `).join('') || '<div class="empty-state"><div class="empty-state-icon">📅</div><h3>No semesters yet</h3></div>';
+}
+
+async function toggleSem(id) {
+  await apiPost(`/api/semesters/${id}/toggle/`, {});
+  showToast('Semester status updated', 'success');
+  loadSemesters(); fetchSemestersForDropdowns();
+}
+
+async function addSemester() {
+  const d = await apiPost('/api/semesters/', { number: +document.getElementById('sem-num').value, start_date: document.getElementById('sem-start').value, end_date: document.getElementById('sem-end').value });
+  if (d.success) { showToast(`Semester ${d.number} created!`, 'success'); closeModal('addSemModal'); loadSemesters(); fetchSemestersForDropdowns(); }
+  else showToast(d.error, 'error');
+}
+
+async function loadSubjects() {
+  const d = await apiGet('/api/subjects/');
+  const tbody = document.getElementById('subjBody');
+  tbody.innerHTML = (d.subjects || []).map(s => `
+    <tr><td><code style="color:var(--accent-cyan)">${s.code}</code></td><td><strong>${s.name}</strong></td>
+    <td><span class="pill pill-blue">Sem ${s.semester}</span></td><td>${s.credits}</td>
+    <td><span class="pill ${s.is_active ? 'pill-green':'pill-red'}">${s.is_active?'Active':'Inactive'}</span></td></tr>
+  `).join('') || `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">📭</div><h3>No subjects</h3></div></td></tr>`;
+}
+
+async function addSubject() {
+  const d = await apiPost('/api/subjects/', { code: document.getElementById('subj-code').value, name: document.getElementById('subj-name').value, semester_id: +document.getElementById('subj-sem').value, credits: +document.getElementById('subj-credits').value });
+  if (d.success) { showToast('Subject created!', 'success'); closeModal('addSubjModal'); loadSubjects(); }
+  else showToast(d.error, 'error');
+}
+
+async function loadAssignments() {
+  const d = await apiGet('/api/teacher-assignments/');
+  const tbody = document.getElementById('assignBody');
+  tbody.innerHTML = (d.assignments || []).map(a => `
+    <tr><td><strong>${a.teacher_name}</strong></td><td>${a.subject_name}</td>
+    <td><code style="color:var(--accent-cyan)">${a.subject_code}</code></td>
+    <td><span class="pill pill-blue">Sem ${a.semester}</span></td></tr>
+  `).join('') || `<tr><td colspan="4"><div class="empty-state"><div class="empty-state-icon">📭</div><h3>No assignments</h3></div></td></tr>`;
+}
+
+async function loadSubjectsForSem() {
+  const semId = document.getElementById('assign-sem').value;
+  const d = await apiGet(`/api/subjects/?semester_id=${semId}`);
+  const el = document.getElementById('assign-subj');
+  el.innerHTML = (d.subjects || []).map(s => `<option value="${s.id}">${s.name} (${s.code})</option>`).join('');
+}
+
+async function assignTeacher() {
+  const d = await apiPost('/api/teacher-assignments/', { teacher_id: +document.getElementById('assign-teacher').value, subject_id: +document.getElementById('assign-subj').value, semester_id: +document.getElementById('assign-sem').value });
+  if (d.success) { showToast('Teacher assigned!', 'success'); closeModal('addAssignModal'); loadAssignments(); }
+  else showToast(d.error, 'error');
+}
+
+async function loadTimetable() {
+  const semId = document.getElementById('ttSemFilter')?.value || '';
+  const d = await apiGet(`/api/timetable/?semester_id=${semId}`);
+  const days = ['monday','tuesday','wednesday','thursday','friday','saturday'];
+  const tbody = document.getElementById('ttBody');
+  tbody.innerHTML = (d.timetable || []).map(t => `
+    <tr><td><span class="pill pill-blue">${t.day.charAt(0).toUpperCase()+t.day.slice(1)}</span></td>
+    <td>${t.start_time}</td><td>${t.end_time}</td>
+    <td><strong>${t.subject}</strong> <code style="font-size:0.75rem;color:var(--accent-cyan)">${t.subject_code}</code></td>
+    <td>${t.teacher}</td><td><span class="pill pill-purple">Sem ${t.semester}</span></td>
+    <td><button class="btn-danger btn-sm" onclick="deleteTTSlot(${t.id})">🗑️</button></td></tr>
+  `).join('') || `<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">📭</div><h3>No timetable slots</h3></div></td></tr>`;
+}
+
+async function loadTTSubjects() {
+  const semId = document.getElementById('tt-sem').value;
+  const d = await apiGet(`/api/subjects/?semester_id=${semId}`);
+  const el = document.getElementById('tt-subj');
+  el.innerHTML = (d.subjects || []).map(s => `<option value="${s.id}">${s.name} (${s.code})</option>`).join('');
+}
+
+async function addTimetableSlot() {
+  const d = await apiPost('/api/timetable/', { semester_id: +document.getElementById('tt-sem').value, day: document.getElementById('tt-day').value, start_time: document.getElementById('tt-start').value, end_time: document.getElementById('tt-end').value, subject_id: +document.getElementById('tt-subj').value });
+  if (d.success) { showToast('Timetable slot added!', 'success'); closeModal('addTTModal'); loadTimetable(); }
+  else showToast(d.error, 'error');
+}
+
+async function deleteTTSlot(id) {
+  const r = await fetch('/api/timetable/', { method: 'DELETE', headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify({id}) });
+  const d = await r.json();
+  if (d.success) { showToast('Slot removed', 'warning'); loadTimetable(); }
+}
+
+async function loadTeachers() {
+  const d = await apiGet('/api/users/?role=teacher');
+  document.getElementById('teacherBody').innerHTML = (d.users||[]).map(u=>`<tr><td>${u.full_name}</td><td><code style="color:var(--accent-cyan)">${u.login_id}</code></td><td><span class="pill ${u.is_active?'pill-green':'pill-red'}">${u.is_active?'Active':'Inactive'}</span></td></tr>`).join('');
+}
+
+async function loadStudents() {
+  const d = await apiGet('/api/users/?role=student');
+  document.getElementById('studentBody').innerHTML = (d.users||[]).map(u=>`<tr><td>${u.full_name}</td><td><code style="color:var(--accent-cyan)">${u.login_id}</code></td><td><span class="pill ${u.is_active?'pill-green':'pill-red'}">${u.is_active?'Active':'Inactive'}</span></td></tr>`).join('');
+}
+
+async function loadResets() {
+  const d = await apiGet('/api/password-reset/manage/');
+  const list = document.getElementById('vpResetList');
+  list.innerHTML = (d.requests||[]).map(r=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border:1px solid var(--border);border-radius:12px;margin-bottom:0.75rem;">
+      <div><strong>${r.full_name}</strong><div style="font-size:0.8rem;color:var(--text-muted)">${r.login_id} · Teacher · ${new Date(r.requested_at).toLocaleString()}</div></div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn-success btn-sm" onclick="handleReset(${r.id},'approve')">✅ Approve</button>
+        <button class="btn-danger btn-sm" onclick="handleReset(${r.id},'reject')">❌ Reject</button>
+      </div>
+    </div>
+  `).join('') || '<div class="empty-state"><div class="empty-state-icon">✅</div><h3>No pending requests</h3></div>';
+}
+
+async function handleReset(id, action) {
+  const d = await apiPost('/api/password-reset/manage/', {request_id:id, action});
+  if (d.success) { showToast(action==='approve' ? `Approved! Temp: ${d.temp_password}` : 'Rejected', action==='approve'?'success':'warning', 8000); loadResets(); }
+}
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+</script>
+{% endblock %}

@@ -1,0 +1,288 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Teacher Dashboard{% endblock %}
+{% block page_title %}Teacher Dashboard{% endblock %}
+{% block page_subtitle %}Academic execution — attendance & timetable{% endblock %}
+{% block role_icon %}👩‍🏫{% endblock %}
+
+{% block nav_items %}
+<span class="nav-section-title">Overview</span>
+<a class="nav-item active" id="nav-overview" onclick="showSection('sec-overview'); setActiveNav('nav-overview'); loadStats()">
+  <span class="nav-item-icon">📊</span> Dashboard
+</a>
+<span class="nav-section-title">Teaching</span>
+<a class="nav-item" id="nav-timetable" onclick="showSection('sec-timetable'); setActiveNav('nav-timetable'); loadTimetable()">
+  <span class="nav-item-icon">🗒️</span> My Timetable
+</a>
+<a class="nav-item" id="nav-subjects" onclick="showSection('sec-subjects'); setActiveNav('nav-subjects'); loadMySubjects()">
+  <span class="nav-item-icon">📚</span> My Subjects
+</a>
+<a class="nav-item" id="nav-attendance" onclick="showSection('sec-attendance'); setActiveNav('nav-attendance'); loadAttendanceSetup()">
+  <span class="nav-item-icon">✅</span> Mark Attendance
+</a>
+<a class="nav-item" id="nav-records" onclick="showSection('sec-records'); setActiveNav('nav-records'); loadAttendanceRecords()">
+  <span class="nav-item-icon">📋</span> Attendance Records
+</a>
+<span class="nav-section-title">Account</span>
+<a class="nav-item" id="nav-reset" onclick="showSection('sec-reset'); setActiveNav('nav-reset')">
+  <span class="nav-item-icon">🔑</span> Password Reset
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- OVERVIEW -->
+<div id="sec-overview" class="dashboard-section">
+  <div class="section-card" style="margin-bottom:1.5rem;">
+    <div class="section-header"><h3>👩‍🏫 My Assignments</h3></div>
+    <div class="section-body">
+      <div id="assignCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;"></div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-header"><h3>⏰ Today's Classes</h3><span id="todayDate" style="font-size:0.82rem;color:var(--text-muted);"></span></div>
+    <div class="section-body"><div id="todayClasses"></div></div>
+  </div>
+</div>
+
+<!-- TIMETABLE -->
+<div id="sec-timetable" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header"><h3>🗒️ My Teaching Schedule</h3></div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table><thead><tr><th>Day</th><th>Start</th><th>End</th><th>Subject</th><th>Semester</th></tr></thead>
+        <tbody id="ttBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MY SUBJECTS -->
+<div id="sec-subjects" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header"><h3>📚 My Assigned Subjects</h3></div>
+    <div class="section-body">
+      <div id="subjectCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MARK ATTENDANCE -->
+<div id="sec-attendance" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header"><h3>✅ Mark Attendance</h3></div>
+    <div class="section-body">
+      <div class="alert alert-warning" style="margin-bottom:1.25rem;">⚠️ Attendance should be marked during class time only.</div>
+      <div class="form-grid" style="margin-bottom:1.5rem;">
+        <div class="form-group"><label>Subject & Semester</label><select id="att-subject-sem"></select></div>
+        <div class="form-group"><label>Date</label><input type="date" id="att-date" style="width:100%;padding:0.875rem 1rem;background:var(--bg-card);border:1px solid var(--border-light);border-radius:12px;color:var(--text-primary);font-family:inherit;outline:none;" value=""></div>
+      </div>
+      <button class="btn-primary" onclick="loadStudentsForAttendance()" style="margin-bottom:1.5rem;">📋 Load Students</button>
+
+      <div id="attStudentsArea" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h4 style="color:var(--text-secondary);">Mark each student:</h4>
+          <div style="display:flex;gap:0.5rem;">
+            <button class="btn-success btn-sm" onclick="markAll('present')">✅ All Present</button>
+            <button class="btn-danger btn-sm" onclick="markAll('absent')">❌ All Absent</button>
+          </div>
+        </div>
+        <div class="attendance-grid" id="attGrid"></div>
+        <button class="btn-primary" style="margin-top:1.5rem;width:100%;padding:0.95rem;" onclick="submitAttendance()">💾 Save Attendance</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ATTENDANCE RECORDS -->
+<div id="sec-records" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header">
+      <h3>📋 Attendance Records</h3>
+      <div style="display:flex;gap:0.5rem;">
+        <input type="date" id="rec-date" style="padding:0.4rem 0.75rem;background:var(--bg-card);border:1px solid var(--border-light);border-radius:8px;color:var(--text-primary);font-family:inherit;outline:none;font-size:0.82rem;">
+        <button class="btn-secondary btn-sm" onclick="loadAttendanceRecords()">🔍 Filter</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table><thead><tr><th>Student</th><th>Roll No</th><th>Subject</th><th>Date</th><th>Status</th></tr></thead>
+        <tbody id="recBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD RESET -->
+<div id="sec-reset" class="dashboard-section" style="display:none">
+  <div class="section-card" style="max-width:480px;">
+    <div class="section-header"><h3>🔑 Request Password Reset</h3></div>
+    <div class="section-body">
+      <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1.25rem;">Your reset request will be sent to the <strong>Vice Principal</strong> for approval. You'll receive a temporary password once approved.</p>
+      <button class="btn-primary" style="width:100%;" onclick="requestReset()">📩 Submit Reset Request</button>
+      <div id="resetResult" style="margin-top:1rem;"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let myAssignments = [];
+let attStudents = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadStats();
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('att-date').value = today;
+  document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-IN', {weekday:'long',day:'numeric',month:'long'});
+});
+
+async function loadStats() {
+  const d = await apiGet('/api/dashboard/stats/');
+  myAssignments = d.assignments || [];
+  const cards = document.getElementById('assignCards');
+  const dayName = new Date().toLocaleDateString('en-US',{weekday:'long'}).toLowerCase();
+
+  cards.innerHTML = myAssignments.length ? myAssignments.map(a => `
+    <div style="padding:1.25rem;background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.2);border-radius:12px;">
+      <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.06em;color:var(--accent-cyan);margin-bottom:0.35rem;">${a.subject_code}</div>
+      <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">${a.subject}</div>
+      <span class="pill pill-blue">Semester ${a.semester}</span>
+    </div>
+  `).join('') : '<div class="empty-state"><div class="empty-state-icon">📭</div><h3>No subjects assigned</h3></div>';
+
+  // Populate subject-semester select for attendance
+  const sel = document.getElementById('att-subject-sem');
+  sel.innerHTML = myAssignments.map(a => `<option value="${a.subject_id}|SEM" data-sem="${a.semester}">${a.subject} — Sem ${a.semester}</option>`).join('');
+
+  // Today's classes from timetable
+  const ttData = await apiGet('/api/timetable/');
+  const todaySlots = (ttData.timetable || []).filter(t => t.day === dayName);
+  const todayEl = document.getElementById('todayClasses');
+  todayEl.innerHTML = todaySlots.length ? todaySlots.map(t => `
+    <div style="display:flex;align-items:center;gap:1rem;padding:1rem;border:1px solid var(--border);border-radius:12px;margin-bottom:0.75rem;">
+      <div style="padding:0.5rem 0.75rem;background:rgba(79,142,247,0.15);border-radius:8px;font-size:0.8rem;font-weight:600;color:var(--accent-blue);white-space:nowrap;">${t.start_time} – ${t.end_time}</div>
+      <div><div style="font-weight:600;">${t.subject}</div><div style="font-size:0.78rem;color:var(--text-muted)">Semester ${t.semester}</div></div>
+      <button class="btn-primary btn-sm" style="margin-left:auto;" onclick="showSection('sec-attendance'); setActiveNav('nav-attendance'); loadAttendanceSetup()">Mark Now</button>
+    </div>
+  `).join('') : '<div class="empty-state"><div class="empty-state-icon">🎉</div><h3>No classes today</h3></div>';
+}
+
+async function loadTimetable() {
+  const d = await apiGet('/api/timetable/');
+  const tbody = document.getElementById('ttBody');
+  tbody.innerHTML = (d.timetable || []).map(t => `
+    <tr><td><span class="pill pill-blue">${t.day.charAt(0).toUpperCase()+t.day.slice(1)}</span></td>
+    <td>${t.start_time}</td><td>${t.end_time}</td>
+    <td><strong>${t.subject}</strong> <code style="font-size:0.75rem;color:var(--accent-cyan)">${t.subject_code||''}</code></td>
+    <td><span class="pill pill-purple">Sem ${t.semester}</span></td></tr>
+  `).join('') || `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">📭</div><h3>No timetable found</h3></div></td></tr>`;
+}
+
+async function loadMySubjects() {
+  const d = await apiGet('/api/subjects/');
+  const el = document.getElementById('subjectCards');
+  el.innerHTML = (d.subjects || []).map(s => `
+    <div style="padding:1.25rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;transition:all 0.2s;" onmouseenter="this.style.borderColor='var(--accent-blue)'" onmouseleave="this.style.borderColor='var(--border)'">
+      <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.06em;color:var(--accent-cyan);margin-bottom:0.35rem;">${s.code}</div>
+      <div style="font-weight:700;margin-bottom:0.5rem;">${s.name}</div>
+      <div style="display:flex;gap:0.5rem;">
+        <span class="pill pill-blue">Sem ${s.semester}</span>
+        <span class="pill pill-purple">${s.credits} credits</span>
+      </div>
+    </div>
+  `).join('') || '<div class="empty-state"><div class="empty-state-icon">📭</div><h3>No subjects assigned</h3></div>';
+}
+
+async function loadAttendanceSetup() {
+  const d = await apiGet('/api/dashboard/stats/');
+  myAssignments = d.assignments || [];
+  const sel = document.getElementById('att-subject-sem');
+  sel.innerHTML = myAssignments.map((a, i) => `<option value="${a.subject_id}|${a.semester}" data-idx="${i}">${a.subject} — Sem ${a.semester}</option>`).join('');
+}
+
+async function loadStudentsForAttendance() {
+  const val = document.getElementById('att-subject-sem').value;
+  if (!val) { showToast('Please select a subject', 'warning'); return; }
+  const [subjectId, semester] = val.split('|');
+  const date = document.getElementById('att-date').value;
+
+  // Get semester ID by number
+  const semData = await apiGet('/api/semesters/');
+  const sem = (semData.semesters || []).find(s => s.number == semester);
+  if (!sem) { showToast('Semester not found', 'error'); return; }
+
+  const d = await apiGet(`/api/attendance/mark/?subject_id=${subjectId}&semester_id=${sem.id}&date=${date}`);
+  attStudents = d.students || [];
+
+  const grid = document.getElementById('attGrid');
+  grid.innerHTML = attStudents.map((s, i) => `
+    <div class="attendance-card ${s.status === 'present' ? 'present' : s.status === 'absent' ? 'absent' : ''}" id="att-card-${i}">
+      <div class="att-student-name">${s.full_name}</div>
+      <div class="att-roll">${s.roll_number}</div>
+      <div class="att-buttons">
+        <button class="att-btn present-btn ${s.status === 'present' ? 'selected' : ''}" onclick="selectAtt(${i}, 'present')">✅ Present</button>
+        <button class="att-btn absent-btn ${s.status === 'absent' ? 'selected' : ''}" onclick="selectAtt(${i}, 'absent')">❌ Absent</button>
+      </div>
+    </div>
+  `).join('') || '<div class="empty-state"><div class="empty-state-icon">👥</div><h3>No students in this semester</h3></div>';
+
+  document.getElementById('attStudentsArea').style.display = attStudents.length ? 'block' : 'none';
+  attStudents.forEach((s, i) => { s._status = s.status === 'unmarked' ? null : s.status; });
+}
+
+function selectAtt(idx, status) {
+  attStudents[idx]._status = status;
+  const card = document.getElementById(`att-card-${idx}`);
+  card.className = `attendance-card ${status}`;
+  card.querySelectorAll('.att-btn').forEach(btn => btn.classList.remove('selected'));
+  card.querySelector(`.${status}-btn`).classList.add('selected');
+}
+
+function markAll(status) {
+  attStudents.forEach((s, i) => selectAtt(i, status));
+}
+
+async function submitAttendance() {
+  const val = document.getElementById('att-subject-sem').value;
+  const [subjectId, semester] = val.split('|');
+  const date = document.getElementById('att-date').value;
+
+  const semData = await apiGet('/api/semesters/');
+  const sem = (semData.semesters || []).find(s => s.number == semester);
+
+  const records = attStudents
+    .filter(s => s._status)
+    .map(s => ({ student_id: s.id, status: s._status }));
+
+  if (!records.length) { showToast('Please mark at least one student', 'warning'); return; }
+
+  const d = await apiPost('/api/attendance/mark/', {
+    subject_id: +subjectId,
+    semester_id: sem.id,
+    date,
+    records,
+  });
+  if (d.success) showToast(`✅ ${d.message}`, 'success');
+  else showToast(d.error || 'Failed', 'error');
+}
+
+async function loadAttendanceRecords() {
+  const date = document.getElementById('rec-date').value;
+  const d = await apiGet(`/api/attendance/report/${date ? '?date=' + date : ''}`);
+  const tbody = document.getElementById('recBody');
+  tbody.innerHTML = (d.records || []).map(r => `
+    <tr><td>${r.student_name}</td><td><code style="font-size:0.8rem;color:var(--accent-cyan)">${r.roll_number}</code></td>
+    <td>${r.subject}</td><td>${r.date}</td>
+    <td><span class="pill ${r.status === 'present' ? 'pill-green' : 'pill-red'}">${r.status}</span></td></tr>
+  `).join('') || `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">📋</div><h3>No records</h3></div></td></tr>`;
+}
+
+async function requestReset() {
+  const d = await apiPost('/api/password-reset/request/', {});
+  const el = document.getElementById('resetResult');
+  if (d.success) { el.innerHTML = `<div class="alert alert-success">✅ ${d.message}</div>`; showToast('Reset request submitted!', 'success'); }
+  else el.innerHTML = `<div class="alert alert-error">❌ ${d.error}</div>`;
+}
+</script>
+{% endblock %}

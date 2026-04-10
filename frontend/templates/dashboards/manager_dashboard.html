@@ -1,0 +1,307 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Manager Dashboard{% endblock %}
+{% block page_title %}Manager Dashboard{% endblock %}
+{% block page_subtitle %}Student operations — add, manage, view{% endblock %}
+{% block role_icon %}👔{% endblock %}
+
+{% block nav_items %}
+<span class="nav-section-title">Overview</span>
+<a class="nav-item active" id="nav-overview" onclick="showSection('sec-overview'); setActiveNav('nav-overview'); loadStats()">
+  <span class="nav-item-icon">📊</span> Dashboard
+</a>
+<span class="nav-section-title">Students</span>
+<a class="nav-item" id="nav-add" onclick="showSection('sec-add'); setActiveNav('nav-add'); initAdd()">
+  <span class="nav-item-icon">➕</span> Add Students
+</a>
+<a class="nav-item" id="nav-manage" onclick="showSection('sec-manage'); setActiveNav('nav-manage'); loadStudents()">
+  <span class="nav-item-icon">🗂️</span> Manage Students
+</a>
+<span class="nav-section-title">Admin</span>
+<a class="nav-item" id="nav-resets" onclick="showSection('sec-resets'); setActiveNav('nav-resets'); loadResets()">
+  <span class="nav-item-icon">🔑</span> Password Resets
+  <span class="pill pill-amber" id="resetBadge" style="margin-left:auto;display:none">0</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- OVERVIEW -->
+<div id="sec-overview" class="dashboard-section">
+  <div class="stats-grid">
+    <div class="stat-card blue"><div class="stat-icon blue">👩‍🎓</div><div class="stat-content"><div class="stat-value" id="s-total">—</div><div class="stat-label">Total Students</div></div></div>
+    <div class="stat-card green"><div class="stat-icon green">✅</div><div class="stat-content"><div class="stat-value" id="s-active">—</div><div class="stat-label">Active Students</div></div></div>
+    <div class="stat-card red"><div class="stat-icon red">🚫</div><div class="stat-content"><div class="stat-value" id="s-inactive">—</div><div class="stat-label">Inactive Students</div></div></div>
+    <div class="stat-card amber"><div class="stat-icon amber">🔑</div><div class="stat-content"><div class="stat-value" id="s-resets">—</div><div class="stat-label">Pending Resets</div></div></div>
+  </div>
+  <div class="section-card">
+    <div class="section-header"><h3>👔 Manager Responsibilities</h3></div>
+    <div class="section-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;">
+        <div style="padding:1rem;background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.2);border-radius:12px;"><div style="font-size:1.2rem;margin-bottom:0.4rem;">📤</div><strong style="font-size:0.85rem;">CSV Upload</strong><p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">Bulk add students from CSV file</p></div>
+        <div style="padding:1rem;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:12px;"><div style="font-size:1.2rem;margin-bottom:0.4rem;">✏️</div><strong style="font-size:0.85rem;">Manual Entry</strong><p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">Add students one by one</p></div>
+        <div style="padding:1rem;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:12px;"><div style="font-size:1.2rem;margin-bottom:0.4rem;">🔄</div><strong style="font-size:0.85rem;">Activate/Deactivate</strong><p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">Toggle student account status</p></div>
+        <div style="padding:1rem;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;"><div style="font-size:1.2rem;margin-bottom:0.4rem;">🔑</div><strong style="font-size:0.85rem;">Password Resets</strong><p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;">Approve student reset requests</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD STUDENTS -->
+<div id="sec-add" class="dashboard-section" style="display:none">
+  <!-- Tab Switch -->
+  <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
+    <button class="btn-primary" id="tab-csv" onclick="switchTab('csv')">📤 CSV Upload (Main)</button>
+    <button class="btn-secondary" id="tab-manual" onclick="switchTab('manual')">✏️ Manual Entry</button>
+  </div>
+
+  <!-- CSV Tab -->
+  <div id="tab-csv-content" class="section-card">
+    <div class="section-header"><h3>📤 Bulk CSV Upload</h3></div>
+    <div class="section-body">
+      <div class="alert alert-info" style="margin-bottom:1.25rem;">ℹ️ CSV format: <code>full_name, roll_number, email, phone, semester_number</code> — one student per row, no header row needed.</div>
+      <div style="border:2px dashed var(--border-light);border-radius:12px;padding:2.5rem;text-align:center;cursor:pointer;transition:all 0.2s;" id="dropZone" onclick="document.getElementById('csvFile').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent-blue)'"  ondragleave="this.style.borderColor='var(--border-light)'" ondrop="handleDrop(event)">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem;">📂</div>
+        <div style="font-size:1rem;font-weight:600;color:var(--text-primary);">Drop CSV file here or click to browse</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.4rem;">Supports .csv files only</div>
+        <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="previewCSV(this)">
+      </div>
+      <div id="csvPreview" style="margin-top:1.25rem;display:none;">
+        <h4 style="margin-bottom:0.75rem;color:var(--text-secondary);">Preview</h4>
+        <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Roll No</th><th>Email</th><th>Phone</th><th>Semester</th></tr></thead><tbody id="csvPreviewBody"></tbody></table></div>
+        <button class="btn-primary" style="margin-top:1rem;" onclick="uploadCSV()">✅ Upload All Students</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual Tab -->
+  <div id="tab-manual-content" class="section-card" style="display:none">
+    <div class="section-header"><h3>✏️ Manual Student Entry</h3></div>
+    <div class="section-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Full Name</label><div class="input-wrapper"><span class="input-icon">👤</span><input type="text" id="m-name" placeholder="Student full name"></div></div>
+        <div class="form-group"><label>Roll Number</label><div class="input-wrapper"><span class="input-icon">🔖</span><input type="text" id="m-roll" placeholder="e.g. BCA2024001"></div></div>
+        <div class="form-group"><label>Email</label><div class="input-wrapper"><span class="input-icon">📧</span><input type="email" id="m-email" placeholder="student@college.edu"></div></div>
+        <div class="form-group"><label>Phone</label><div class="input-wrapper"><span class="input-icon">📞</span><input type="tel" id="m-phone" placeholder="10-digit number"></div></div>
+        <div class="form-group"><label>Semester</label><select id="m-sem"></select></div>
+        <div class="form-group"><label>Enrollment Date</label><input type="date" id="m-enroll" style="width:100%;padding:0.875rem 1rem;background:var(--bg-card);border:1px solid var(--border-light);border-radius:12px;color:var(--text-primary);font-family:inherit;outline:none;"></div>
+      </div>
+      <button class="btn-primary" style="margin-top:0.5rem;" onclick="addStudentManual()">✅ Add Student</button>
+      <div id="manualResult" style="margin-top:1rem;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE STUDENTS -->
+<div id="sec-manage" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header">
+      <h3>🗂️ All Students</h3>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <select id="semFilter" onchange="loadStudents()" style="width:auto;padding:0.4rem 0.75rem;font-size:0.82rem;"><option value="">All Semesters</option></select>
+        <select id="statusFilter" onchange="loadStudents()" style="width:auto;padding:0.4rem 0.75rem;font-size:0.82rem;">
+          <option value="">All Status</option><option value="active">Active</option><option value="inactive">Inactive</option>
+        </select>
+        <input type="text" id="searchInput" placeholder="🔍 Search..." oninput="filterTable()" style="padding:0.4rem 0.75rem;background:var(--bg-card);border:1px solid var(--border-light);border-radius:8px;color:var(--text-primary);font-family:inherit;outline:none;font-size:0.82rem;width:160px;">
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Name</th><th>Roll No</th><th>Semester</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="studentTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD RESETS -->
+<div id="sec-resets" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header"><h3>🔑 Student Password Reset Requests</h3></div>
+    <div class="section-body"><div id="resetList"></div></div>
+  </div>
+</div>
+
+<!-- Student Detail Modal -->
+<div class="modal-overlay hidden" id="studentDetailModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header"><h3>👩‍🎓 Student Details</h3><button class="modal-close" onclick="closeModal('studentDetailModal')">✕</button></div>
+    <div class="modal-body" id="studentDetailBody"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let csvData = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadStats();
+  loadSemestersDropdown();
+});
+
+async function loadStats() {
+  const d = await apiGet('/api/dashboard/stats/');
+  const total = (d.total_students || 0) + (d.inactive_students || 0);
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-active').textContent = d.total_students ?? '—';
+  document.getElementById('s-inactive').textContent = d.inactive_students ?? '—';
+  document.getElementById('s-resets').textContent = d.pending_resets ?? '—';
+  if (d.pending_resets > 0) {
+    document.getElementById('resetBadge').style.display = 'inline-flex';
+    document.getElementById('resetBadge').textContent = d.pending_resets;
+  }
+}
+
+async function loadSemestersDropdown() {
+  const d = await apiGet('/api/semesters/');
+  ['semFilter','m-sem'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const hasAll = id === 'semFilter';
+    el.innerHTML = (hasAll ? '<option value="">All Semesters</option>' : '') +
+      (d.semesters||[]).map(s => `<option value="${s.id}">Semester ${s.number}${s.is_current?' ✅':''}</option>`).join('');
+  });
+}
+
+function initAdd() { loadSemestersDropdown(); }
+
+function switchTab(tab) {
+  ['csv','manual'].forEach(t => {
+    document.getElementById(`tab-${t}-content`).style.display = t === tab ? 'block' : 'none';
+    document.getElementById(`tab-${t}`).className = t === tab ? 'btn-primary' : 'btn-secondary';
+  });
+}
+
+function previewCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const rows = e.target.result.trim().split('\n').map(r => r.split(',').map(c => c.trim()));
+    csvData = rows;
+    const tbody = document.getElementById('csvPreviewBody');
+    tbody.innerHTML = rows.map(r => `<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
+    document.getElementById('csvPreview').style.display = 'block';
+  };
+  reader.readAsText(file);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').style.borderColor = 'var(--border-light)';
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.csv')) {
+    const input = document.getElementById('csvFile');
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    previewCSV(input);
+  }
+}
+
+async function uploadCSV() {
+  if (!csvData.length) return;
+  let success = 0, errors = [];
+  for (const row of csvData) {
+    const [full_name, roll_number, email, phone, semester_number] = row;
+    const d = await apiPost('/api/manager/students/', { full_name, roll_number, email, phone, semester_number: +semester_number });
+    if (d.success) success++;
+    else errors.push(`${roll_number}: ${d.error}`);
+  }
+  showToast(`✅ ${success} students added${errors.length ? `, ${errors.length} errors` : ''}`, success > 0 ? 'success' : 'error', 6000);
+  if (errors.length) console.error(errors);
+}
+
+async function addStudentManual() {
+  const d = await apiPost('/api/manager/students/', {
+    full_name: document.getElementById('m-name').value,
+    roll_number: document.getElementById('m-roll').value,
+    email: document.getElementById('m-email').value,
+    phone: document.getElementById('m-phone').value,
+    semester_id: +document.getElementById('m-sem').value,
+    enrollment_date: document.getElementById('m-enroll').value,
+  });
+  const el = document.getElementById('manualResult');
+  if (d.success) {
+    el.innerHTML = `<div class="alert alert-success">✅ Student added! Login ID: <strong>${d.login_id}</strong> · Temp Password: <code style="color:var(--accent-green)">${d.temp_password}</code></div>`;
+    showToast('Student added successfully!', 'success');
+  } else {
+    el.innerHTML = `<div class="alert alert-error">❌ ${d.error}</div>`;
+  }
+}
+
+async function loadStudents() {
+  const semId = document.getElementById('semFilter')?.value || '';
+  const d = await apiGet(`/api/manager/students/?semester_id=${semId}`);
+  const tbody = document.getElementById('studentTableBody');
+  tbody.innerHTML = (d.students || []).map(s => `
+    <tr>
+      <td><strong>${s.full_name}</strong></td>
+      <td><code style="font-size:0.8rem;color:var(--accent-cyan)">${s.roll_number}</code></td>
+      <td><span class="pill pill-blue">Sem ${s.semester || '—'}</span></td>
+      <td><span class="pill ${s.is_active ? 'pill-green' : 'pill-red'}">${s.is_active ? '● Active' : '● Inactive'}</span></td>
+      <td style="display:flex;gap:0.5rem;">
+        <button class="btn-secondary btn-sm" onclick="viewStudent(${s.id})">👁️ View</button>
+        <button class="btn-sm ${s.is_active ? 'btn-danger' : 'btn-success'}" onclick="toggleStudent(${s.id})">
+          ${s.is_active ? '🚫 Deactivate' : '✅ Activate'}
+        </button>
+      </td>
+    </tr>
+  `).join('') || `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">📭</div><h3>No students found</h3></div></td></tr>`;
+}
+
+function filterTable() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('#studentTableBody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+async function toggleStudent(id) {
+  await apiPost(`/api/users/${id}/toggle/`, {});
+  showToast('Student status updated', 'success');
+  loadStudents(); loadStats();
+}
+
+async function viewStudent(id) {
+  const d = await apiGet(`/api/manager/students/${id}/`);
+  const body = document.getElementById('studentDetailBody');
+  const s = d.student;
+  body.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div><label style="font-size:0.78rem;color:var(--text-muted);">Full Name</label><div style="font-weight:600;">${s.full_name}</div></div>
+      <div><label style="font-size:0.78rem;color:var(--text-muted);">Roll Number</label><div style="font-weight:600;">${s.roll_number}</div></div>
+      <div><label style="font-size:0.78rem;color:var(--text-muted);">Email</label><div>${s.email}</div></div>
+      <div><label style="font-size:0.78rem;color:var(--text-muted);">Phone</label><div>${s.phone || '—'}</div></div>
+      <div><label style="font-size:0.78rem;color:var(--text-muted);">Semester</label><span class="pill pill-blue">Sem ${s.semester || '—'}</span></div>
+      <div><label style="font-size:0.78rem;color:var(--text-muted);">Status</label><span class="pill ${s.is_active ? 'pill-green' : 'pill-red'}">${s.is_active ? 'Active' : 'Inactive'}</span></div>
+      <div><label style="font-size:0.78rem;color:var(--text-muted);">Attendance %</label><div style="font-weight:600;">${s.attendance_pct ?? '—'}%</div></div>
+      <div><label style="font-size:0.78rem;color:var(--text-muted);">Fee Status</label><span class="pill ${s.fee_status === 'paid' ? 'pill-green' : 'pill-amber'}">${s.fee_status || '—'}</span></div>
+    </div>`;
+  document.getElementById('studentDetailModal').classList.remove('hidden');
+}
+
+async function loadResets() {
+  const d = await apiGet('/api/password-reset/manage/');
+  const list = document.getElementById('resetList');
+  list.innerHTML = (d.requests||[]).map(r=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border:1px solid var(--border);border-radius:12px;margin-bottom:0.75rem;">
+      <div><strong>${r.full_name}</strong><div style="font-size:0.8rem;color:var(--text-muted)">${r.login_id} · ${new Date(r.requested_at).toLocaleString()}</div></div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn-success btn-sm" onclick="handleReset(${r.id},'approve')">✅ Approve</button>
+        <button class="btn-danger btn-sm" onclick="handleReset(${r.id},'reject')">❌ Reject</button>
+      </div>
+    </div>
+  `).join('') || '<div class="empty-state"><div class="empty-state-icon">✅</div><h3>No pending requests</h3></div>';
+}
+
+async function handleReset(id, action) {
+  const d = await apiPost('/api/password-reset/manage/', {request_id:id, action});
+  if (d.success) { showToast(action==='approve' ? `Temp: ${d.temp_password}` : 'Rejected', action==='approve'?'success':'warning', 8000); loadResets(); loadStats(); }
+}
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+</script>
+{% endblock %}

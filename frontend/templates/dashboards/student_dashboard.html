@@ -1,0 +1,227 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Student Dashboard{% endblock %}
+{% block page_title %}Student Dashboard{% endblock %}
+{% block page_subtitle %}My academic information — read only{% endblock %}
+{% block role_icon %}👩‍🎓{% endblock %}
+
+{% block nav_items %}
+<span class="nav-section-title">My Info</span>
+<a class="nav-item active" id="nav-overview" onclick="showSection('sec-overview'); setActiveNav('nav-overview'); loadStats()">
+  <span class="nav-item-icon">📊</span> Dashboard
+</a>
+<a class="nav-item" id="nav-timetable" onclick="showSection('sec-timetable'); setActiveNav('nav-timetable'); loadTimetable()">
+  <span class="nav-item-icon">🗒️</span> My Timetable
+</a>
+<a class="nav-item" id="nav-subjects" onclick="showSection('sec-subjects'); setActiveNav('nav-subjects'); loadSubjects()">
+  <span class="nav-item-icon">📚</span> My Subjects
+</a>
+<a class="nav-item" id="nav-attendance" onclick="showSection('sec-attendance'); setActiveNav('nav-attendance'); loadAttendance()">
+  <span class="nav-item-icon">✅</span> Attendance
+</a>
+<a class="nav-item" id="nav-fees" onclick="showSection('sec-fees'); setActiveNav('nav-fees'); loadFees()">
+  <span class="nav-item-icon">💰</span> Fees
+</a>
+<span class="nav-section-title">Account</span>
+<a class="nav-item" id="nav-reset" onclick="showSection('sec-reset'); setActiveNav('nav-reset')">
+  <span class="nav-item-icon">🔑</span> Password Reset
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- OVERVIEW -->
+<div id="sec-overview" class="dashboard-section">
+  <div class="stats-grid">
+    <div class="stat-card blue"><div class="stat-icon blue">📅</div><div class="stat-content"><div class="stat-value" id="s-sem">—</div><div class="stat-label">Current Semester</div></div></div>
+    <div class="stat-card green"><div class="stat-icon green">✅</div><div class="stat-content"><div class="stat-value" id="s-att">—</div><div class="stat-label">Avg. Attendance</div></div></div>
+    <div class="stat-card amber"><div class="stat-icon amber">💰</div><div class="stat-content"><div class="stat-value" id="s-fee">—</div><div class="stat-label">Pending Fees</div></div></div>
+    <div class="stat-card purple"><div class="stat-icon purple">🔖</div><div class="stat-content"><div class="stat-value" id="s-roll" style="font-size:1.1rem;"></div><div class="stat-label">Roll Number</div></div></div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-header"><h3>⏰ Today's Schedule</h3><span id="todayDate" style="font-size:0.82rem;color:var(--text-muted);"></span></div>
+    <div class="section-body"><div id="todaySlots"></div></div>
+  </div>
+
+  <div class="section-card" style="margin-top:0;">
+    <div class="section-header"><h3>📊 Quick Attendance Summary</h3></div>
+    <div class="section-body"><div id="quickAtt" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;"></div></div>
+  </div>
+</div>
+
+<!-- TIMETABLE -->
+<div id="sec-timetable" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header"><h3>🗒️ My Semester Schedule</h3></div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table><thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Teacher</th></tr></thead>
+        <tbody id="ttBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUBJECTS -->
+<div id="sec-subjects" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header"><h3>📚 My Semester Subjects</h3></div>
+    <div class="section-body">
+      <div id="subjCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ATTENDANCE -->
+<div id="sec-attendance" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header"><h3>✅ My Attendance Record</h3></div>
+    <div class="section-body">
+      <div id="attSummary"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FEES -->
+<div id="sec-fees" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header"><h3>💰 My Fee Status</h3></div>
+    <div class="section-body">
+      <div class="alert alert-info" style="margin-bottom:1.25rem;">ℹ️ Contact the Accountant to update your payment. You can view but not edit fee records.</div>
+      <div id="feeRecords"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD RESET -->
+<div id="sec-reset" class="dashboard-section" style="display:none">
+  <div class="section-card" style="max-width:480px;">
+    <div class="section-header"><h3>🔑 Request Password Reset</h3></div>
+    <div class="section-body">
+      <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1.25rem;">Your reset request will be sent to the <strong>Manager</strong> for approval. You'll receive a temporary password once approved.</p>
+      <button class="btn-primary" style="width:100%;" onclick="requestReset()">📩 Submit Reset Request</button>
+      <div id="resetResult" style="margin-top:1rem;"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadStats();
+  document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});
+});
+
+async function loadStats() {
+  const d = await apiGet('/api/dashboard/stats/');
+  document.getElementById('s-sem').textContent = d.semester ? `Sem ${d.semester}` : '—';
+  document.getElementById('s-fee').textContent = d.pending_fees > 0 ? `${d.pending_fees} due` : 'Clear ✅';
+  document.getElementById('s-roll').textContent = d.roll_number || '—';
+
+  // Attendance stats
+  const attData = await apiGet('/api/attendance/report/');
+  const summary = attData.summary || [];
+  const avgPct = summary.length ? Math.round(summary.reduce((s, x) => s + x.percentage, 0) / summary.length) : 0;
+  document.getElementById('s-att').textContent = avgPct + '%';
+
+  // Quick attendance cards
+  document.getElementById('quickAtt').innerHTML = summary.map(s => `
+    <div style="padding:1rem;background:var(--bg-surface);border:1px solid ${s.percentage>=75?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'};border-radius:12px;">
+      <div style="font-size:0.72rem;color:var(--accent-cyan);font-weight:600;margin-bottom:0.25rem;">${s.subject_code}</div>
+      <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.5rem;">${s.subject_name}</div>
+      <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text-muted);">
+        <span>Present: ${s.present}/${s.total_classes}</span>
+        <strong style="color:${s.percentage>=75?'var(--accent-green)':'var(--accent-red)'};">${s.percentage}%</strong>
+      </div>
+      <div class="fee-progress" style="margin-top:0.5rem;">
+        <div class="fee-progress-bar" style="width:${s.percentage}%;background:${s.percentage>=75?'linear-gradient(90deg,var(--accent-green),#16a34a)':'linear-gradient(90deg,var(--accent-red),#dc2626)'}"></div>
+      </div>
+    </div>
+  `).join('') || '<div class="empty-state"><div class="empty-state-icon">📊</div><h3>No attendance data yet</h3></div>';
+
+  // Today's timetable
+  const dayName = new Date().toLocaleDateString('en-US',{weekday:'long'}).toLowerCase();
+  const ttData = await apiGet('/api/timetable/');
+  const todaySlots = (ttData.timetable || []).filter(t => t.day === dayName);
+  document.getElementById('todaySlots').innerHTML = todaySlots.length ? todaySlots.map(t => `
+    <div style="display:flex;align-items:center;gap:1rem;padding:1rem;border:1px solid var(--border);border-radius:12px;margin-bottom:0.75rem;">
+      <div style="padding:0.5rem 0.75rem;background:rgba(79,142,247,0.15);border-radius:8px;font-size:0.8rem;font-weight:600;color:var(--accent-blue);white-space:nowrap;">${t.start_time} – ${t.end_time}</div>
+      <div><div style="font-weight:600;">${t.subject}</div><div style="font-size:0.78rem;color:var(--text-muted);">Teacher: ${t.teacher || '—'}</div></div>
+    </div>
+  `).join('') : '<div class="empty-state"><div class="empty-state-icon">🎉</div><h3>No classes today</h3></div>';
+}
+
+async function loadTimetable() {
+  const d = await apiGet('/api/timetable/');
+  const tbody = document.getElementById('ttBody');
+  tbody.innerHTML = (d.timetable || []).map(t => `
+    <tr><td><span class="pill pill-blue">${t.day.charAt(0).toUpperCase()+t.day.slice(1)}</span></td>
+    <td>${t.start_time} – ${t.end_time}</td>
+    <td><strong>${t.subject}</strong></td>
+    <td>${t.teacher || '—'}</td></tr>
+  `).join('') || `<tr><td colspan="4"><div class="empty-state"><div class="empty-state-icon">📭</div><h3>No timetable</h3></div></td></tr>`;
+}
+
+async function loadSubjects() {
+  const d = await apiGet('/api/subjects/');
+  document.getElementById('subjCards').innerHTML = (d.subjects || []).map(s => `
+    <div style="padding:1.25rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;">
+      <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.06em;color:var(--accent-cyan);margin-bottom:0.35rem;">${s.code}</div>
+      <div style="font-weight:700;margin-bottom:0.5rem;">${s.name}</div>
+      <span class="pill pill-purple">${s.credits} credits</span>
+    </div>
+  `).join('') || '<div class="empty-state"><div class="empty-state-icon">📭</div><h3>No subjects</h3></div>';
+}
+
+async function loadAttendance() {
+  const d = await apiGet('/api/attendance/report/');
+  const summary = d.summary || [];
+  document.getElementById('attSummary').innerHTML = summary.length ? `
+    <div class="table-wrapper">
+      <table><thead><tr><th>Subject</th><th>Code</th><th>Total Classes</th><th>Present</th><th>Absent</th><th>Percentage</th></tr></thead>
+      <tbody>${summary.map(s => `
+        <tr>
+          <td><strong>${s.subject_name}</strong></td>
+          <td><code style="color:var(--accent-cyan)">${s.subject_code}</code></td>
+          <td>${s.total_classes}</td>
+          <td style="color:var(--accent-green);">${s.present}</td>
+          <td style="color:var(--accent-red);">${s.absent}</td>
+          <td>
+            <span style="font-weight:700;color:${s.percentage>=75?'var(--accent-green)':'var(--accent-red)'};">${s.percentage}%</span>
+            ${s.percentage < 75 ? '<span class="pill pill-red" style="margin-left:0.5rem;">⚠️ Low</span>' : ''}
+          </td>
+        </tr>
+      `).join('')}</tbody>
+      </table>
+    </div>
+  ` : '<div class="empty-state"><div class="empty-state-icon">📊</div><h3>No attendance records yet</h3></div>';
+}
+
+async function loadFees() {
+  const d = await apiGet('/api/fees/student/');
+  const fees = d.fees || [];
+  document.getElementById('feeRecords').innerHTML = fees.length ? fees.map(f => `
+    <div style="padding:1.25rem;border:1px solid ${f.status==='paid'?'rgba(34,197,94,0.3)':f.status==='partial'?'rgba(245,158,11,0.3)':'rgba(239,68,68,0.3)'};border-radius:12px;margin-bottom:1rem;background:${f.status==='paid'?'rgba(34,197,94,0.04)':f.status==='partial'?'rgba(245,158,11,0.04)':'rgba(239,68,68,0.04)'};">
+      <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem;">
+        <strong>Semester ${f.semester}</strong>
+        <span class="pill ${f.status==='paid'?'pill-green':f.status==='partial'?'pill-amber':'pill-red'}">${f.status.toUpperCase()}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;font-size:0.85rem;">
+        <div><div style="color:var(--text-muted);font-size:0.75rem;">Total Fee</div><strong>₹${(+f.total_fee).toLocaleString('en-IN')}</strong></div>
+        <div><div style="color:var(--text-muted);font-size:0.75rem;">Paid</div><strong style="color:var(--accent-green);">₹${(+f.amount_paid).toLocaleString('en-IN')}</strong></div>
+        <div><div style="color:var(--text-muted);font-size:0.75rem;">Pending</div><strong style="color:${+f.pending>0?'var(--accent-red)':'var(--accent-green)'};">₹${(+f.pending).toLocaleString('en-IN')}</strong></div>
+      </div>
+      <div class="fee-progress" style="margin-top:0.75rem;"><div class="fee-progress-bar" style="width:${Math.round(f.amount_paid/f.total_fee*100)}%"></div></div>
+      ${f.due_date ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">Due: ${f.due_date}${f.payment_date ? ` · Paid on: ${f.payment_date}` : ''}</div>` : ''}
+    </div>
+  `).join('') : '<div class="empty-state"><div class="empty-state-icon">💰</div><h3>No fee records</h3></div>';
+}
+
+async function requestReset() {
+  const d = await apiPost('/api/password-reset/request/', {});
+  const el = document.getElementById('resetResult');
+  if (d.success) { el.innerHTML = `<div class="alert alert-success">✅ ${d.message}</div>`; showToast('Reset request sent to Manager!', 'success'); }
+  else el.innerHTML = `<div class="alert alert-error">❌ ${d.error}</div>`;
+}
+</script>
+{% endblock %}

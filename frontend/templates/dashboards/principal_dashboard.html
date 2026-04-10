@@ -1,0 +1,360 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Principal Dashboard{% endblock %}
+{% block page_title %}Principal Dashboard{% endblock %}
+{% block page_subtitle %}System supervision & administration{% endblock %}
+{% block role_icon %}👑{% endblock %}
+
+{% block nav_items %}
+<span class="nav-section-title">Overview</span>
+<a class="nav-item active" id="nav-overview" onclick="showSection('sec-overview'); setActiveNav('nav-overview')">
+  <span class="nav-item-icon">📊</span> Dashboard
+</a>
+
+<span class="nav-section-title">Administration</span>
+<a class="nav-item" id="nav-users" onclick="showSection('sec-users'); setActiveNav('nav-users'); loadUsers()">
+  <span class="nav-item-icon">👥</span> Manage Roles
+</a>
+<a class="nav-item" id="nav-view-data" onclick="showSection('sec-view-data'); setActiveNav('nav-view-data'); loadViewData()">
+  <span class="nav-item-icon">👁️</span> View Data
+</a>
+<a class="nav-item" id="nav-resets" onclick="showSection('sec-resets'); setActiveNav('nav-resets'); loadResetRequests()">
+  <span class="nav-item-icon">🔑</span> Password Resets
+  <span class="pill pill-red" id="resetBadge" style="margin-left:auto; display:none">0</span>
+</a>
+<a class="nav-item" id="nav-profile" onclick="showSection('sec-profile'); setActiveNav('nav-profile')">
+  <span class="nav-item-icon">🧑</span> My Profile
+</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── OVERVIEW ─────────────────────────────────────────────── -->
+<div id="sec-overview" class="dashboard-section">
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card blue">
+      <div class="stat-icon blue">👩‍🎓</div>
+      <div class="stat-content">
+        <div class="stat-value" id="stat-students">—</div>
+        <div class="stat-label">Total Students</div>
+      </div>
+    </div>
+    <div class="stat-card cyan">
+      <div class="stat-icon cyan">👩‍🏫</div>
+      <div class="stat-content">
+        <div class="stat-value" id="stat-teachers">—</div>
+        <div class="stat-label">Total Teachers</div>
+      </div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-icon purple">📚</div>
+      <div class="stat-content">
+        <div class="stat-value" id="stat-semesters">—</div>
+        <div class="stat-label">Active Semesters</div>
+      </div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-icon amber">🔑</div>
+      <div class="stat-content">
+        <div class="stat-value" id="stat-resets">—</div>
+        <div class="stat-label">Pending Resets</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-header">
+      <h3>🏛️ System Overview</h3>
+    </div>
+    <div class="section-body">
+      <p style="color:var(--text-secondary); font-size:0.9rem;">
+        You are the <strong style="color:var(--accent-blue)">Principal</strong> — the highest authority in IMS. You supervise all roles but don't perform day-to-day operations. Use the sidebar to manage staff roles, view all data, and approve password resets.
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-top:1.5rem;">
+        <div style="padding:1rem;background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.2);border-radius:12px;">
+          <div style="font-size:1.3rem;margin-bottom:0.5rem;">👔</div>
+          <strong style="font-size:0.85rem;">You Manage</strong>
+          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem;">VP · Manager · Accountant accounts</p>
+        </div>
+        <div style="padding:1rem;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:12px;">
+          <div style="font-size:1.3rem;margin-bottom:0.5rem;">👁️</div>
+          <strong style="font-size:0.85rem;">You View</strong>
+          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem;">All students · All teachers (read-only)</p>
+        </div>
+        <div style="padding:1rem;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;">
+          <div style="font-size:1.3rem;margin-bottom:0.5rem;">🔑</div>
+          <strong style="font-size:0.85rem;">You Approve</strong>
+          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem;">VP · Manager · Accountant resets</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MANAGE ROLES ─────────────────────────────────────────── -->
+<div id="sec-users" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header">
+      <h3>👥 Manage Roles</h3>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <select id="filterRole" onchange="loadUsers()" style="width:auto;padding:0.4rem 0.75rem;font-size:0.82rem;">
+          <option value="">All Roles</option>
+          <option value="vp">Vice Principal</option>
+          <option value="manager">Manager</option>
+          <option value="accountant">Accountant</option>
+          <option value="teacher">Teacher</option>
+        </select>
+        <button class="btn-primary btn-sm" onclick="openAddUserModal()">➕ Add User</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Login ID</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">⏳</div><h3>Loading...</h3></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── VIEW DATA ───────────────────────────────────────────── -->
+<div id="sec-view-data" class="dashboard-section" style="display:none">
+  <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;">
+    <button class="btn-primary" onclick="loadViewData('student')">👩‍🎓 Students</button>
+    <button class="btn-secondary" onclick="loadViewData('teacher')">👩‍🏫 Teachers</button>
+  </div>
+  <div class="section-card">
+    <div class="section-header">
+      <h3 id="viewDataTitle">📋 All Records</h3>
+    </div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table>
+          <thead id="viewDataHead"></thead>
+          <tbody id="viewDataBody">
+            <tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">👆</div><h3>Select a category above</h3></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PASSWORD RESETS ─────────────────────────────────────── -->
+<div id="sec-resets" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header">
+      <h3>🔑 Pending Password Reset Requests</h3>
+    </div>
+    <div class="section-body">
+      <div id="resetList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PROFILE ─────────────────────────────────────────────── -->
+<div id="sec-profile" class="dashboard-section" style="display:none">
+  <div class="section-card" style="max-width:480px;">
+    <div class="section-header"><h3>🧑 My Profile</h3></div>
+    <div class="section-body">
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+        <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent-blue),var(--accent-purple));display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;color:white;">{{ full_name.0 }}</div>
+        <div>
+          <div style="font-size:1.1rem;font-weight:700;">{{ full_name }}</div>
+          <span class="pill pill-red" style="margin-top:0.25rem;">👑 Principal</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Login ID</label>
+        <div class="input-wrapper">
+          <span class="input-icon">👤</span>
+          <input type="text" value="{{ user.login_id }}" readonly style="opacity:0.7;">
+        </div>
+      </div>
+      <a href="/change-password/" class="btn-secondary" style="width:100%;justify-content:center;margin-top:0.5rem;">🔒 Change Password</a>
+    </div>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay hidden" id="addUserModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>➕ Create New Account</h3>
+      <button class="modal-close" onclick="closeAddUserModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Full Name</label>
+          <div class="input-wrapper">
+            <span class="input-icon">👤</span>
+            <input type="text" id="new-name" placeholder="Full name">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Login ID</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🆔</span>
+            <input type="text" id="new-login-id" placeholder="e.g. VP001">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select id="new-role">
+            <option value="vp">Vice Principal</option>
+            <option value="manager">Manager</option>
+            <option value="accountant">Accountant</option>
+            <option value="teacher">Teacher</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <div class="input-wrapper">
+            <span class="input-icon">📧</span>
+            <input type="email" id="new-email" placeholder="email@college.edu">
+          </div>
+        </div>
+      </div>
+      <div class="alert alert-info" id="tempPwdBox" style="display:none;margin-top:1rem;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAddUserModal()">Cancel</button>
+      <button class="btn-primary" onclick="createUser()">✅ Create Account</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadStats();
+  setInterval(loadStats, 30000);
+});
+
+async function loadStats() {
+  const data = await apiGet('/api/dashboard/stats/');
+  document.getElementById('stat-students').textContent = data.total_students ?? '—';
+  document.getElementById('stat-teachers').textContent = data.total_teachers ?? '—';
+  document.getElementById('stat-semesters').textContent = data.active_semesters ?? '—';
+  document.getElementById('stat-resets').textContent = data.pending_resets ?? '—';
+  if (data.pending_resets > 0) {
+    document.getElementById('resetBadge').style.display = 'inline-flex';
+    document.getElementById('resetBadge').textContent = data.pending_resets;
+  }
+}
+
+async function loadUsers() {
+  const role = document.getElementById('filterRole')?.value ?? '';
+  const data = await apiGet(`/api/users/?role=${role}`);
+  const tbody = document.getElementById('usersTableBody');
+  if (!data.users || data.users.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">👻</div><h3>No users found</h3></div></td></tr>`;
+    return;
+  }
+  const roleLabels = { vp:'Vice Principal', manager:'Manager', accountant:'Accountant', teacher:'Teacher', principal:'Principal' };
+  tbody.innerHTML = data.users.map(u => `
+    <tr>
+      <td><strong>${u.full_name}</strong></td>
+      <td><code style="font-size:0.8rem;color:var(--accent-cyan)">${u.login_id}</code></td>
+      <td><span class="pill pill-blue">${roleLabels[u.role] || u.role}</span></td>
+      <td><span class="pill ${u.is_active ? 'pill-green' : 'pill-red'}">${u.is_active ? '● Active' : '● Inactive'}</span></td>
+      <td>
+        <button class="btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}" onclick="toggleUser(${u.id}, this)">
+          ${u.is_active ? '🚫 Deactivate' : '✅ Activate'}
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function toggleUser(userId, btn) {
+  const data = await apiPost(`/api/users/${userId}/toggle/`, {});
+  showToast(data.is_active ? 'User activated' : 'User deactivated', data.is_active ? 'success' : 'warning');
+  loadUsers();
+}
+
+async function loadViewData(type = 'student') {
+  const data = await apiGet(`/api/users/?role=${type}`);
+  const head = document.getElementById('viewDataHead');
+  const body = document.getElementById('viewDataBody');
+  document.getElementById('viewDataTitle').textContent = type === 'student' ? '👩‍🎓 All Students' : '👩‍🏫 All Teachers';
+
+  head.innerHTML = `<tr><th>Name</th><th>Login ID</th><th>Status</th></tr>`;
+  if (!data.users || data.users.length === 0) {
+    body.innerHTML = `<tr><td colspan="3"><div class="empty-state"><div class="empty-state-icon">📭</div><h3>No records</h3></div></td></tr>`;
+    return;
+  }
+  body.innerHTML = data.users.map(u => `
+    <tr>
+      <td>${u.full_name}</td>
+      <td><code style="font-size:0.8rem;color:var(--accent-cyan)">${u.login_id}</code></td>
+      <td><span class="pill ${u.is_active ? 'pill-green' : 'pill-red'}">${u.is_active ? '● Active' : '● Inactive'}</span></td>
+    </tr>
+  `).join('');
+}
+
+async function loadResetRequests() {
+  const data = await apiGet('/api/password-reset/manage/');
+  const list = document.getElementById('resetList');
+  if (!data.requests || data.requests.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✅</div><h3>No pending requests</h3></div>`;
+    return;
+  }
+  list.innerHTML = data.requests.map(r => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border:1px solid var(--border);border-radius:12px;margin-bottom:0.75rem;background:rgba(255,255,255,0.02);">
+      <div>
+        <strong>${r.full_name}</strong>
+        <div style="font-size:0.8rem;color:var(--text-muted)">${r.login_id} · ${r.role} · ${new Date(r.requested_at).toLocaleString('en-IN')}</div>
+      </div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn-success btn-sm" onclick="handleReset(${r.id},'approve')">✅ Approve</button>
+        <button class="btn-danger btn-sm" onclick="handleReset(${r.id},'reject')">❌ Reject</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function handleReset(id, action) {
+  const data = await apiPost('/api/password-reset/manage/', { request_id: id, action });
+  if (data.success) {
+    if (action === 'approve') showToast(`✅ Approved! Temp password: ${data.temp_password}`, 'success', 8000);
+    else showToast('Reset request rejected', 'warning');
+    loadResetRequests();
+    loadStats();
+  }
+}
+
+function openAddUserModal() { document.getElementById('addUserModal').classList.remove('hidden'); }
+function closeAddUserModal() { document.getElementById('addUserModal').classList.add('hidden'); }
+
+async function createUser() {
+  const name = document.getElementById('new-name').value;
+  const loginId = document.getElementById('new-login-id').value;
+  const role = document.getElementById('new-role').value;
+  const email = document.getElementById('new-email').value;
+  if (!name || !loginId) { showToast('Name and Login ID are required', 'error'); return; }
+  const data = await apiPost('/api/users/', { full_name: name, login_id: loginId, role, email });
+  if (data.success) {
+    const box = document.getElementById('tempPwdBox');
+    box.style.display = 'flex';
+    box.innerHTML = `✅ Account created!<br><strong>Login ID:</strong> ${data.login_id}<br><strong>Temp Password:</strong> <code style="font-size:1rem;color:var(--accent-green)">${data.temp_password}</code><br><small>Share this securely with the user.</small>`;
+    showToast('Account created successfully!', 'success');
+    loadUsers();
+  } else {
+    showToast(data.error || 'Failed to create user', 'error');
+  }
+}
+</script>
+{% endblock %}

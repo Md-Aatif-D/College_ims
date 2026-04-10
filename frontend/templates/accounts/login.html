@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — IMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    .login-center-wrap {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 2rem 1rem;
+      padding-top: max(2rem, 5vh);
+    }
+
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .login-logo-icon {
+      font-size: 2.2rem;
+      filter: drop-shadow(0 0 16px rgba(79, 142, 247, 0.6));
+    }
+
+    .login-logo-name {
+      font-size: 1.9rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.03em;
+    }
+
+    .login-logo-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      letter-spacing: 0.03em;
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 400px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      padding: 1.75rem;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+      margin-bottom: 1rem;
+    }
+
+    .alert-dismiss {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .alert-dismiss:hover {
+      color: var(--text-primary);
+    }
+
+    .login-box-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .login-box-sub {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1.75rem;
+    }
+
+    .login-page-footer {
+      margin-top: 1.5rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body class="login-body">
+
+  <!-- Background orbs -->
+  <div class="login-bg">
+    <div class="login-orb orb-1"></div>
+    <div class="login-orb orb-2"></div>
+    <div class="login-orb orb-3"></div>
+  </div>
+
+  <div class="login-center-wrap">
+
+    <!-- Logo -->
+    <div class="login-logo">
+      <span class="login-logo-icon">🎓</span>
+      <div>
+        <div class="login-logo-name">IMS</div>
+        <div class="login-logo-sub">Institution Management System</div>
+      </div>
+    </div>
+
+    <!-- Login Card -->
+    <div class="login-box">
+      <div class="login-box-title">Login</div>
+      <div class="login-box-sub">Enter your credentials to access your account</div>
+
+      {% if error %}
+      <div class="alert alert-error" id="errorAlert"
+        style="margin-bottom:1.25rem;display:flex;align-items:center;gap:0.5rem;">
+        <span>⚠️</span> <span>{{ error }}</span>
+        <button class="alert-dismiss" onclick="document.getElementById('errorAlert').remove()"
+          title="Dismiss">✕</button>
+      </div>
+      {% endif %}
+
+      <form id="loginForm" method="POST" action="/login/">
+        {% csrf_token %}
+
+        <div class="form-group">
+          <label for="login_id">Login ID</label>
+          <div class="input-wrapper">
+            <span class="input-icon">👤</span>
+            <input type="text" id="login_id" name="login_id" placeholder="Your Login ID" required
+              autocomplete="username">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔑</span>
+            <input type="password" id="password" name="password" placeholder="Your Password" required
+              autocomplete="current-password">
+            <button type="button" class="toggle-pwd" onclick="togglePassword()" id="toggleBtn">👁️</button>
+          </div>
+        </div>
+
+        <div class="forgot-link">
+          <a href="#" onclick="showForgotModal()">Forgot Password?</a>
+        </div>
+
+        <button type="submit" class="btn-login" id="loginBtn">
+          <span id="loginText">Login</span>
+          <span id="loginSpinner" class="spinner hidden"></span>
+        </button>
+      </form>
+    </div>
+
+    <div class="login-page-footer">
+      No account? Contact your institution administrator.
+    </div>
+
+  </div>
+
+  <!-- Forgot Password Modal -->
+  <div class="modal-overlay hidden" id="forgotModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>🔑 Password Reset Request</h3>
+        <button onclick="closeForgotModal()" class="modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Your request will be forwarded to your supervisor. Once approved you'll receive a temporary password.</p>
+        <div class="reset-flow">
+          <div class="flow-item">👩‍🎓 Student → Manager</div>
+          <div class="flow-item">👩‍🏫 Teacher → Vice Principal</div>
+          <div class="flow-item">👔 VP / Manager / Accountant → Principal</div>
+        </div>
+        <div class="form-group" style="margin-top:1rem;">
+          <label>Your Login ID</label>
+          <div class="input-wrapper">
+            <span class="input-icon">👤</span>
+            <input type="text" id="reset_login_id" placeholder="Enter your Login ID">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeForgotModal()">Cancel</button>
+        <button class="btn-primary" onclick="submitResetRequest()">Submit Request</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function togglePassword() {
+      const input = document.getElementById('password');
+      const btn = document.getElementById('toggleBtn');
+      input.type = input.type === 'password' ? 'text' : 'password';
+      btn.textContent = input.type === 'password' ? '👁️' : '🙈';
+    }
+
+    function showForgotModal() {
+      document.getElementById('forgotModal').classList.remove('hidden');
+    }
+
+    function closeForgotModal() {
+      document.getElementById('forgotModal').classList.add('hidden');
+    }
+
+    async function submitResetRequest() {
+      const login_id = document.getElementById('reset_login_id').value;
+      if (!login_id) return alert('Please enter your Login ID');
+      
+      try {
+        const res = await fetch('/api/password-reset/request/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ login_id })
+        });
+        const data = await res.json();
+        if(res.ok) {
+          alert('Reset request submitted! Your supervisor will be notified.');
+          closeForgotModal();
+        } else {
+          alert(data.error || 'Failed to submit request');
+        }
+      } catch (err) {
+        alert('An error occurred. Please try again.');
+      }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', function () {
+      const btn = document.getElementById('loginBtn');
+      const text = document.getElementById('loginText');
+      const spinner = document.getElementById('loginSpinner');
+      btn.disabled = true;
+      text.textContent = 'Logging in...';
+      spinner.classList.remove('hidden');
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,235 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Accountant Dashboard{% endblock %}
+{% block page_title %}Accountant Dashboard{% endblock %}
+{% block page_subtitle %}Financial control — fees & payments{% endblock %}
+{% block role_icon %}💰{% endblock %}
+
+{% block nav_items %}
+<span class="nav-section-title">Overview</span>
+<a class="nav-item active" id="nav-overview" onclick="showSection('sec-overview'); setActiveNav('nav-overview'); loadStats()">
+  <span class="nav-item-icon">📊</span> Dashboard
+</a>
+<span class="nav-section-title">Fees</span>
+<a class="nav-item" id="nav-sem-fees" onclick="showSection('sec-sem-fees'); setActiveNav('nav-sem-fees'); loadSemFees()">
+  <span class="nav-item-icon">🏷️</span> Semester Fees
+</a>
+<a class="nav-item" id="nav-payments" onclick="showSection('sec-payments'); setActiveNav('nav-payments'); loadPayments()">
+  <span class="nav-item-icon">💳</span> Student Payments
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- OVERVIEW -->
+<div id="sec-overview" class="dashboard-section">
+  <div class="stats-grid">
+    <div class="stat-card green"><div class="stat-icon green">💰</div><div class="stat-content"><div class="stat-value" id="s-collected">—</div><div class="stat-label">Total Collected (₹)</div></div></div>
+    <div class="stat-card amber"><div class="stat-icon amber">⏳</div><div class="stat-content"><div class="stat-value" id="s-pending-amt">—</div><div class="stat-label">Pending Amount (₹)</div></div></div>
+    <div class="stat-card blue"><div class="stat-icon blue">✅</div><div class="stat-content"><div class="stat-value" id="s-paid">—</div><div class="stat-label">Paid Cases</div></div></div>
+    <div class="stat-card red"><div class="stat-icon red">📋</div><div class="stat-content"><div class="stat-value" id="s-pending-count">—</div><div class="stat-label">Pending Cases</div></div></div>
+  </div>
+
+  <!-- Fee Summary Chart-like bars -->
+  <div class="section-card">
+    <div class="section-header"><h3>💹 Collection Overview</h3></div>
+    <div class="section-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.85rem;">
+            <span style="color:var(--text-secondary);">Paid</span>
+            <span id="pct-paid" style="color:var(--accent-green);font-weight:600;">—%</span>
+          </div>
+          <div class="fee-progress"><div class="fee-progress-bar" id="bar-paid" style="width:0%"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.85rem;">
+            <span style="color:var(--text-secondary);">Partial</span>
+            <span id="pct-partial" style="color:var(--accent-amber);font-weight:600;">—%</span>
+          </div>
+          <div class="fee-progress"><div class="fee-progress-bar" id="bar-partial" style="width:0%;background:linear-gradient(90deg,var(--accent-amber),#d97706)"></div></div>
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-top:1rem;">Accountant manages fees only. Academic data (timetable, subjects, attendance) is out of scope.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SEMESTER FEES -->
+<div id="sec-sem-fees" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header">
+      <h3>🏷️ Semester Fee Structure</h3>
+      <button class="btn-primary btn-sm" onclick="openModal('addFeeModal')">➕ Set Fee</button>
+    </div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table><thead><tr><th>Semester</th><th>Fee Amount (₹)</th><th>Due Date</th><th>Action</th></tr></thead>
+        <tbody id="semFeeBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT PAYMENTS -->
+<div id="sec-payments" class="dashboard-section" style="display:none">
+  <div class="section-card">
+    <div class="section-header">
+      <h3>💳 Student Fee Records</h3>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <select id="paymentSemFilter" onchange="loadPayments()" style="width:auto;padding:0.4rem 0.75rem;font-size:0.82rem;"><option value="">All Semesters</option></select>
+        <select id="paymentStatusFilter" onchange="loadPayments()" style="width:auto;padding:0.4rem 0.75rem;font-size:0.82rem;">
+          <option value="">All Status</option><option value="paid">Paid</option><option value="pending">Pending</option><option value="partial">Partial</option>
+        </select>
+        <button class="btn-primary btn-sm" onclick="openModal('enterPayModal')">💳 Enter Payment</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="table-wrapper">
+        <table><thead><tr><th>Student</th><th>Roll No</th><th>Semester</th><th>Total Fee</th><th>Paid</th><th>Pending</th><th>Status</th></tr></thead>
+        <tbody id="paymentBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Set Fee Modal -->
+<div class="modal-overlay hidden" id="addFeeModal">
+  <div class="modal">
+    <div class="modal-header"><h3>🏷️ Set Semester Fee</h3><button class="modal-close" onclick="closeModal('addFeeModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Semester</label><select id="fee-sem"></select></div>
+      <div class="form-group"><label>Fee Amount (₹)</label><div class="input-wrapper"><span class="input-icon">₹</span><input type="number" id="fee-amount" placeholder="e.g. 25000" min="0"></div></div>
+      <div class="form-group"><label>Due Date</label><input type="date" id="fee-due" style="width:100%;padding:0.875rem 1rem;background:var(--bg-card);border:1px solid var(--border-light);border-radius:12px;color:var(--text-primary);font-family:inherit;outline:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('addFeeModal')">Cancel</button>
+      <button class="btn-primary" onclick="setSemFee()">✅ Set Fee</button>
+    </div>
+  </div>
+</div>
+
+<!-- Enter Payment Modal -->
+<div class="modal-overlay hidden" id="enterPayModal">
+  <div class="modal">
+    <div class="modal-header"><h3>💳 Enter Student Payment</h3><button class="modal-close" onclick="closeModal('enterPayModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Student Roll No</label><div class="input-wrapper"><span class="input-icon">🔖</span><input type="text" id="pay-roll" placeholder="Roll number"></div></div>
+        <div class="form-group"><label>Semester</label><select id="pay-sem"></select></div>
+        <div class="form-group"><label>Amount Paid (₹)</label><div class="input-wrapper"><span class="input-icon">₹</span><input type="number" id="pay-amount" placeholder="Amount" min="0"></div></div>
+        <div class="form-group"><label>Payment Date</label><input type="date" id="pay-date" style="width:100%;padding:0.875rem 1rem;background:var(--bg-card);border:1px solid var(--border-light);border-radius:12px;color:var(--text-primary);font-family:inherit;outline:none;"></div>
+        <div class="form-group"><label>Transaction ID</label><div class="input-wrapper"><span class="input-icon">🔗</span><input type="text" id="pay-txn" placeholder="Optional"></div></div>
+        <div class="form-group"><label>Remarks</label><div class="input-wrapper"><span class="input-icon">📝</span><input type="text" id="pay-remarks" placeholder="Optional"></div></div>
+      </div>
+      <div id="payResult" style="margin-top:1rem;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('enterPayModal')">Cancel</button>
+      <button class="btn-primary" onclick="enterPayment()">✅ Save Payment</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allSems = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadStats();
+  loadSemDropdowns();
+});
+
+async function loadStats() {
+  const d = await apiGet('/api/fees/dashboard/');
+  document.getElementById('s-collected').textContent = '₹' + (d.total_collected || 0).toLocaleString('en-IN');
+  document.getElementById('s-pending-amt').textContent = '₹' + (d.total_pending_amount || 0).toLocaleString('en-IN');
+  document.getElementById('s-paid').textContent = d.paid_count ?? '—';
+  document.getElementById('s-pending-count').textContent = (d.pending_count || 0) + (d.partial_count || 0);
+  const total = (d.paid_count || 0) + (d.pending_count || 0) + (d.partial_count || 0);
+  if (total > 0) {
+    const paidPct = Math.round(d.paid_count / total * 100);
+    const partialPct = Math.round(d.partial_count / total * 100);
+    document.getElementById('pct-paid').textContent = paidPct + '%';
+    document.getElementById('pct-partial').textContent = partialPct + '%';
+    document.getElementById('bar-paid').style.width = paidPct + '%';
+    document.getElementById('bar-partial').style.width = partialPct + '%';
+  }
+}
+
+async function loadSemDropdowns() {
+  const d = await apiGet('/api/semesters/');
+  allSems = d.semesters || [];
+  ['fee-sem','pay-sem','paymentSemFilter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const hasAll = id === 'paymentSemFilter';
+    el.innerHTML = (hasAll ? '<option value="">All Semesters</option>' : '') +
+      allSems.map(s => `<option value="${s.id}">Semester ${s.number}${s.is_current?' ✅':''}</option>`).join('');
+  });
+}
+
+async function loadSemFees() {
+  const d = await apiGet('/api/fees/semester/');
+  const tbody = document.getElementById('semFeeBody');
+  tbody.innerHTML = (d.fees || []).map(f => `
+    <tr>
+      <td><span class="pill pill-blue">Semester ${f.semester}</span></td>
+      <td><strong>₹${(+f.amount).toLocaleString('en-IN')}</strong></td>
+      <td>${f.due_date || '—'}</td>
+      <td><button class="btn-primary btn-sm" onclick="editFee(${f.id}, ${f.semester}, ${f.amount})">✏️ Update</button></td>
+    </tr>
+  `).join('') || `<tr><td colspan="4"><div class="empty-state"><div class="empty-state-icon">💰</div><h3>No fee structure set</h3></div></td></tr>`;
+}
+
+async function setSemFee() {
+  const d = await apiPost('/api/fees/semester/', { semester_id: +document.getElementById('fee-sem').value, amount: +document.getElementById('fee-amount').value, due_date: document.getElementById('fee-due').value });
+  if (d.success) { showToast('Fee set successfully!', 'success'); closeModal('addFeeModal'); loadSemFees(); }
+  else showToast(d.error, 'error');
+}
+
+async function loadPayments() {
+  const semId = document.getElementById('paymentSemFilter')?.value || '';
+  const status = document.getElementById('paymentStatusFilter')?.value || '';
+  const d = await apiGet(`/api/fees/student/?semester_id=${semId}&status=${status}`);
+  const tbody = document.getElementById('paymentBody');
+  tbody.innerHTML = (d.fees || []).map(f => `
+    <tr>
+      <td><strong>${f.student_name}</strong></td>
+      <td><code style="font-size:0.8rem;color:var(--accent-cyan)">${f.roll_number}</code></td>
+      <td><span class="pill pill-blue">Sem ${f.semester}</span></td>
+      <td>₹${(+f.total_fee).toLocaleString('en-IN')}</td>
+      <td style="color:var(--accent-green);">₹${(+f.amount_paid).toLocaleString('en-IN')}</td>
+      <td style="color:var(--accent-red);">₹${(+f.pending).toLocaleString('en-IN')}</td>
+      <td><span class="pill ${f.status==='paid'?'pill-green':f.status==='partial'?'pill-amber':'pill-red'}">${f.status}</span></td>
+    </tr>
+  `).join('') || `<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">💳</div><h3>No records</h3></div></td></tr>`;
+}
+
+async function enterPayment() {
+  const rollNo = document.getElementById('pay-roll').value;
+  // Lookup student by roll no first
+  const sData = await apiGet(`/api/manager/students/?roll=${rollNo}`);
+  const students = sData.students || [];
+  if (!students.length) { showToast('Student not found!', 'error'); return; }
+  const student = students[0];
+  const d = await apiPost('/api/fees/student/', {
+    student_id: student.id,
+    semester_id: +document.getElementById('pay-sem').value,
+    amount_paid: +document.getElementById('pay-amount').value,
+    payment_date: document.getElementById('pay-date').value,
+    transaction_id: document.getElementById('pay-txn').value,
+    remarks: document.getElementById('pay-remarks').value,
+  });
+  const el = document.getElementById('payResult');
+  if (d.success) {
+    el.innerHTML = `<div class="alert alert-success">✅ Payment saved! Status: <strong>${d.status}</strong> · Pending: ₹${d.pending}</div>`;
+    showToast('Payment recorded!', 'success'); loadStats();
+  } else {
+    el.innerHTML = `<div class="alert alert-error">❌ ${d.error}</div>`;
+  }
+}
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+</script>
+{% endblock %}
